@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+from bertviz_simulator import generate_attention_simulation
 
 # Função que gerencia as conexões WebSocket
 async def echo(websocket):
@@ -18,6 +19,7 @@ async def echo(websocket):
 async def main():
     async with websockets.serve(echo, "localhost", 8765):
         print("Servidor WebSocket iniciado em ws://localhost:8765")
+        #generate_attention_simulation()
         await asyncio.Future()  # Manter o servidor rodando
 
 # Iniciar o servidor WebSocket
