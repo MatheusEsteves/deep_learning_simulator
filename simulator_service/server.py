@@ -1,41 +1,57 @@
 import asyncio
 import websockets
-import nbformat
+import time
 from jupyter_client import KernelManager
-from notebook import notebookapp
-from notebook.services.contents.filemanager import FileContentsManager
-from IPython import get_ipython
 
-# Função para executar o notebook
-def execute_notebook(notebook_path):
-    """
-    Executa um notebook Jupyter e retorna a saída da execução
-    """
-    # Abrir o notebook
-    with open(notebook_path) as f:
-        notebook_content = nbformat.read(f, as_version=4)
-    
-    # Criar o KernelManager
+# Função para executar uma célula de código no Jupyter
+def run_code_cell(code):
+    # Criação de um KernelManager para gerenciar o kernel
     km = KernelManager()
-    km.start_kernel()
-    kernel = km.client()
-    kernel.start_channels()
+    
+    try:
+        print("Inicializando kernel para comunicação com jupyter notebook")
+        km.start_kernel()  # Inicia o kernel
+    except Exception as e:
+        print(f"Erro ao inicializar kernel para conexão com o jupyter notebook: {str(e)}")
 
-    # Executar as células do notebook
-    exec_result = []
-    for cell in notebook_content.cells:
-        if cell.cell_type == 'code':
-            # Executar a célula de código
-            kernel.execute(cell.source)
-            # Obter a resposta da execução da célula
-            message = kernel.get_iopub_msg(timeout=60)
-            exec_result.append(message)
+    kernel = km.client()  # Obtém o cliente para o kernel
 
-    # Parar o kernel após a execução
-    kernel.stop_channels()
-    km.shutdown_kernel()
+    try:
+        print("Inicializando canais de comunicação do jupyter client")
+        kernel.start_channels()  # Abre os canais de comunicação
+    except Exception as e:
+        print(f"Erro ao abrir canais de comunicação do jupyter client: {str(e)}")
 
-    return exec_result
+    # Executa o código
+    try:
+        print("Inicializando execução do código da célula no jupyter notebook")
+        kernel.execute(code)
+    except Exception as e:
+        print(f"Erro ao rodar célula no notebook: {str(e)}")
+    
+    # Aguardar até que a execução seja concluída
+    while True:
+        # Obtém a resposta do kernel (status da execução)
+        try:
+            msg = kernel.get_iopub_msg(timeout=1)  # Espera por mensagens do kernel (ex: execução)
+            if msg:
+                # Verifica se a execução terminou
+                if msg['header']['msg_type'] == 'execute_result' or msg['header']['msg_type'] == 'stream':
+                    # Se a execução resultou em saída ou stream, pegamos a saída
+                    print("Resultado da execução:", msg['content'])
+                    break
+            else:
+                # Se não houver mensagem, continue esperando
+                time.sleep(0.1)
+        except Exception as e:
+            print(f"Erro ao tentar obter resposta de execução da célula no jupyter notebook: {e}")
+
+    # Parar os canais e o kernel após a execução
+    try:
+        kernel.stop_channels()
+        km.shutdown_kernel()
+    except Exception as e:
+        print(f"Erro ao tentar parar os canais de comunicação e o kernel após execução da celula: {str(e)}")
 
 # Função que gerencia as conexões WebSocket
 async def echo(websocket):
@@ -56,12 +72,11 @@ async def main():
     async with websockets.serve(echo, "localhost", 8765):
         print("Servidor WebSocket iniciado em ws://localhost:8765")
 
-        NOTEBOOK_PATH = "bertviz_model.ipynb"
-        try:
-            result = execute_notebook(NOTEBOOK_PATH)
-            print(f"Result : {result}")
-        except Exception as e:
-            print(f"Erro ao rodar modelo no BertViz: {str(e)}")
+        with open('notebook_cells_code/bertviz_model.py', 'r') as bertiz_model_code_file:
+            try:
+                run_code_cell(bertiz_model_code_file.read())
+            except Exception as e:
+                print(f"Erro ao rodar modelo no BertViz: {str(e)}")
         
         await asyncio.Future()  # Manter o servidor rodando
 
