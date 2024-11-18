@@ -2,6 +2,27 @@ import asyncio
 import websockets
 import time
 from jupyter_client import KernelManager
+import os
+
+def remove_notebook_cell_previous_execution_output():
+    if os.path.exists('outputs/cell_execution_output.html'):
+        os.remove('outputs/cell_execution_output.html')
+
+    if os.path.exists('outputs/cell_execution_script_call_output.js'):
+        os.remove('outputs/cell_execution_script_call_output.js')
+
+def save_notebook_cell_execution_output(content_data):
+    with open('outputs/cell_execution_output.html', 'a') as output_file:
+        if 'text/html' in content_data:
+            output_file.write(content_data['text/html'])
+
+        if 'application/javascript' in content_data:
+            with open('outputs/cell_execution_script_call_output.js', 'w') as script_output_file:
+                script_output_file.write(content_data['application/javascript'])
+                script_output_file.close()
+
+            output_file.write('<script src="cell_execution_script_call_output.js"></script>')
+        output_file.close()
 
 # Função para executar uma célula de código no Jupyter
 def run_code_cell(code):
@@ -28,23 +49,32 @@ def run_code_cell(code):
         kernel.execute(code)
     except Exception as e:
         print(f"Erro ao rodar célula no notebook: {str(e)}")
-    
+
+    remove_notebook_cell_previous_execution_output()
+
     # Aguardar até que a execução seja concluída
     while True:
         # Obtém a resposta do kernel (status da execução)
+        msg = ''
         try:
-            msg = kernel.get_iopub_msg(timeout=1)  # Espera por mensagens do kernel (ex: execução)
-            if msg:
-                # Verifica se a execução terminou
-                if msg['header']['msg_type'] == 'execute_result' or msg['header']['msg_type'] == 'stream':
-                    # Se a execução resultou em saída ou stream, pegamos a saída
-                    print("Resultado da execução:", msg['content'])
-                    break
-            else:
-                # Se não houver mensagem, continue esperando
-                time.sleep(0.1)
+            msg = kernel.get_iopub_msg(timeout=300)  # Espera por mensagens do kernel (ex: execução)
         except Exception as e:
             print(f"Erro ao tentar obter resposta de execução da célula no jupyter notebook: {e}")
+
+        if msg and 'header' in msg:
+            print("Mensagem recebida na execução da célula [HEADER] : ", msg['header'])
+            if msg['header']['msg_type'] == 'display_data':
+                print("Formatos retornados pela execução da célula : ", list(msg['content']['data'].keys()))
+                save_notebook_cell_execution_output(msg['content']['data'])
+            elif msg['header']['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
+                print("Execução da célula finalizada com sucesso")
+                break
+        else:
+            # Se não houver mensagem, continue esperando
+            try:
+                time.sleep(0.1)
+            except Exception as e:
+                print(f"Erro ao tentar rodar time.sleep: {e}")
 
     # Parar os canais e o kernel após a execução
     try:
