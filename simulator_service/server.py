@@ -25,7 +25,7 @@ def save_notebook_cell_execution_output(content_data):
         output_file.close()
 
 # Função para executar uma célula de código no Jupyter
-def run_code_cell(code):
+def run_code_cell(code, arguments, imports):
     # Criação de um KernelManager para gerenciar o kernel
     km = KernelManager()
     
@@ -42,6 +42,22 @@ def run_code_cell(code):
         kernel.start_channels()  # Abre os canais de comunicação
     except Exception as e:
         print(f"Erro ao abrir canais de comunicação do jupyter client: {str(e)}")
+
+    # Imports necessários de libs antes de inicializar as próximas células
+    try:
+        print("Inicializando passagem de parâmetros e atribuição de valores")
+        for import_lib in imports:
+            kernel.execute(import_lib)
+    except Exception as e:
+        print(f"Erro ao rodar célula no notebook: {str(e)}")
+
+    # Passagem de parâmetros para declaração e atribuição de valores
+    try:
+        print("Inicializando passagem de parâmetros e atribuição de valores")
+        for argument_key in list(arguments.keys()):
+            kernel.execute(f"{argument_key} = {arguments[argument_key]}")
+    except Exception as e:
+        print(f"Erro ao rodar célula no notebook: {str(e)}")
 
     # Executa o código
     try:
@@ -68,7 +84,8 @@ def run_code_cell(code):
                 save_notebook_cell_execution_output(msg['content']['data'])
             elif msg['header']['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
                 print("Execução da célula finalizada com sucesso")
-                break
+            elif msg['header']['msg_type'] == 'error':
+                print(f"Execução da célula com erro : {msg['content']}")
         else:
             # Se não houver mensagem, continue esperando
             try:
@@ -104,7 +121,13 @@ async def main():
 
         with open('notebook_cells_code/bertviz_model.py', 'r') as bertiz_model_code_file:
             try:
-                run_code_cell(bertiz_model_code_file.read())
+                arguments = {
+                    'sentence_a': "'The cat sat on the mat'",
+                    'sentence_b': "'The cat lay on the rug'",
+                    'visualization_mode': "'model_view'"
+                }
+                imports = ['!pip install bertviz']
+                run_code_cell(bertiz_model_code_file.read(), arguments, imports)
             except Exception as e:
                 print(f"Erro ao rodar modelo no BertViz: {str(e)}")
         
