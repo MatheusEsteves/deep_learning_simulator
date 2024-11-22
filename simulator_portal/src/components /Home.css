@@ -1,5 +1,21 @@
 .App {
   text-align: center;
+  display: grid;
+  grid-row-gap: 30px;
+}
+
+.model-form {
+  display: grid;
+  grid-row-gap: 30px;
+  width: 30%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.model-result {
+  margin-left: auto;
+  margin-right: auto;
+  width: 80%;
 }
 
 .App-logo {

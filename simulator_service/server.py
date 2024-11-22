@@ -3,13 +3,11 @@ import websockets
 import time
 from jupyter_client import KernelManager
 import os
+import json
 
 def remove_notebook_cell_previous_execution_output():
     if os.path.exists('outputs/cell_execution_output.html'):
         os.remove('outputs/cell_execution_output.html')
-
-    if os.path.exists('outputs/cell_execution_script_call_output.js'):
-        os.remove('outputs/cell_execution_script_call_output.js')
 
 def save_notebook_cell_execution_output(content_data):
     with open('outputs/cell_execution_output.html', 'a') as output_file:
@@ -17,11 +15,8 @@ def save_notebook_cell_execution_output(content_data):
             output_file.write(content_data['text/html'])
 
         if 'application/javascript' in content_data:
-            with open('outputs/cell_execution_script_call_output.js', 'w') as script_output_file:
-                script_output_file.write(content_data['application/javascript'])
-                script_output_file.close()
+            output_file.write(f"<script>{content_data['application/javascript']}</script>")
 
-            output_file.write('<script src="cell_execution_script_call_output.js"></script>')
         output_file.close()
 
 # Função para executar uma célula de código no Jupyter
@@ -73,9 +68,9 @@ def run_code_cell(code, arguments, imports):
         # Obtém a resposta do kernel (status da execução)
         msg = ''
         try:
-            msg = kernel.get_iopub_msg(timeout=300)  # Espera por mensagens do kernel (ex: execução)
+            msg = kernel.get_iopub_msg(timeout=10)  # Espera por mensagens do kernel (ex: execução)
         except Exception as e:
-            print(f"Erro ao tentar obter resposta de execução da célula no jupyter notebook: {e}")
+            break
 
         if msg and 'header' in msg:
             print("Mensagem recebida na execução da célula [HEADER] : ", msg['header'])
@@ -100,16 +95,47 @@ def run_code_cell(code, arguments, imports):
     except Exception as e:
         print(f"Erro ao tentar parar os canais de comunicação e o kernel após execução da celula: {str(e)}")
 
+def run_transformer_with_attention(payload):
+    with open('notebook_cells_code/bertviz_model.py', 'r') as bertviz_model_code_file:
+        try:
+            arguments = {
+                'sentence_a': f"'{payload['sentence_a']}'",
+                'sentence_b': f"'{payload['sentence_b']}'",
+                'visualization_mode': f"'{payload['visualization_mode']}'"
+            }
+            imports = ['!pip install bertviz']
+            run_code_cell(bertviz_model_code_file.read(), arguments, imports)
+
+            output_html_file_str = ''
+
+            with open('outputs/cell_execution_output.html', 'r') as output_html_file:
+                output_html_file_str = output_html_file.read()
+            
+            return {
+                'event_response_type': 'run_transformer_with_attention',
+                'event_response_payload': output_html_file_str 
+            }
+        except Exception as e:
+            print(f"Erro ao rodar modelo no BertViz: {str(e)}")
+
 # Função que gerencia as conexões WebSocket
 async def echo(websocket):
     print(f"Nova conexão: {websocket.remote_address}")
+
+    event_actions = {
+        'run_transformer_with_attention': run_transformer_with_attention
+    }
     
     try:
         # Continuar recebendo mensagens do cliente
         async for message in websocket:
             print(f"Mensagem recebida: {message}")
-            # Enviar a mesma mensagem de volta (eco)
-            await websocket.send(f"Recebido: {message}")
+            try:
+                message_dict = json.loads(message)
+                response = event_actions[message_dict['event_action_type']](message_dict['event_payload'])
+                await websocket.send(json.dumps(response))
+            except Exception as e:
+                print(f"Erro ao tentar ler mensagem enviada pelo client : {str(e)}")
     except websockets.exceptions.ConnectionClosed:
         print(f"Conexão fechada: {websocket.remote_address}")
         
@@ -118,18 +144,6 @@ async def echo(websocket):
 async def main():
     async with websockets.serve(echo, "localhost", 8765):
         print("Servidor WebSocket iniciado em ws://localhost:8765")
-
-        with open('notebook_cells_code/bertviz_model.py', 'r') as bertiz_model_code_file:
-            try:
-                arguments = {
-                    'sentence_a': "'The cat sat on the mat'",
-                    'sentence_b': "'The cat lay on the rug'",
-                    'visualization_mode': "'model_view'"
-                }
-                imports = ['!pip install bertviz']
-                run_code_cell(bertiz_model_code_file.read(), arguments, imports)
-            except Exception as e:
-                print(f"Erro ao rodar modelo no BertViz: {str(e)}")
         
         await asyncio.Future()  # Manter o servidor rodando
 
