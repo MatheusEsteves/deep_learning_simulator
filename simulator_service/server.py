@@ -99,11 +99,12 @@ def run_transformer_with_attention(payload):
     with open('notebook_cells_code/bertviz_model.py', 'r') as bertviz_model_code_file:
         try:
             arguments = {
-                'sentence_a': f"'{payload['sentence_a']}'",
-                'sentence_b': f"'{payload['sentence_b']}'",
-                'visualization_mode': f"'{payload['visualization_mode']}'"
+                'TEXT_SENTENCE_TRAIN': f"'{payload['text_sentence_train']}'",
+                'VIEW_MODE': f"'{payload['visualization_mode']}'",
+                'EMBED_SIZE': f"{payload['embed_size']}",
+                'NUM_HEADS': f"{payload['num_heads']}"
             }
-            imports = ['!pip install bertviz']
+            imports = ['!pip install bertviz', '!pip install matplotlib']
             run_code_cell(bertviz_model_code_file.read(), arguments, imports)
 
             output_html_file_str = ''

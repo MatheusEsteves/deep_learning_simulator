@@ -5,9 +5,10 @@ import { ClipLoader } from 'react-spinners';
 import "./Home.css";
 
 function Home() {
-    const [sentenceA, setSentenceA] = useState("");
-    const [sentenceB, setSentenceB] = useState("");
+    const [textSentenceTrain, setTextSentenceTrain] = useState("");
     const [viewMode, setViewMode] = useState("");
+    const [embedSize, setEmbedSize] = useState(0);
+    const [numHeads, setNumHeads] = useState(0);
     const [receivedMessage, setReceivedMessage] = useState({});
     const [loading, setLoading] = useState(false);
     
@@ -29,26 +30,31 @@ function Home() {
         const message = {
             'event_action_type': 'run_transformer_with_attention',
             'event_payload': {
-                'sentence_a': sentenceA,
-                'sentence_b': sentenceB,
-                'visualization_mode': viewMode
+                'text_sentence_train': textSentenceTrain,
+                'visualization_mode': viewMode,
+                'embed_size': embedSize,
+                'num_heads': numHeads
             }
         }
         setLoading(true);
         sendMessage(JSON.stringify(message));
     };
 
-    const handleChangeSentenceA = (e) => {
-        setSentenceA(e.target.value);
+    const handleChangeTextSentenceTrain = (e) => {
+        setTextSentenceTrain(e.target.value);
     }
 
-    const handleChangeSentenceB = (e) => {
-        setSentenceB(e.target.value);
-    }
-
-    const handleViewMode = (e) => {
+    const handleChangeViewMode = (e) => {
         setViewMode(e.target.value);
         handleSendMessage(e.target.value);
+    }
+
+    const handleChangeEmbedSize = (e) => {
+        setEmbedSize(e.target.value);
+    }
+
+    const handleChangeNumHeads = (e) => {
+        setNumHeads(e.target.value);
     }
 
     return (
@@ -56,25 +62,22 @@ function Home() {
             <div class="model-form">
                 <h1>Deep Learning Simulator</h1>
 
-                <h2>Primeira Sentença</h2>
+                <h2>Sentença</h2>
                 <textarea
-                    value={sentenceA}             
-                    onChange={handleChangeSentenceA} 
+                    value={textSentenceTrain}             
+                    onChange={handleChangeTextSentenceTrain} 
                     rows="2"
                     cols="20"
-                    placeholder="Digite a primeira sentença"
+                    placeholder="Digite um texto com palavras para treinamento"
                 />
 
-                <h2>Segunda Sentença</h2>
-                <textarea
-                    value={sentenceB}             
-                    onChange={handleChangeSentenceB} 
-                    rows="2"
-                    cols="20"
-                    placeholder="Digite a segunda sentença"
-                />
+                <h2>Número de dimensões para embedding</h2>
+                <input type="number" value={embedSize} onChange={handleChangeEmbedSize} />
 
-                <select value={viewMode} onChange={handleViewMode}>
+                <h3>Número de heads para atenção</h3>
+                <input type="number" value={numHeads} onChange={handleChangeNumHeads} />
+
+                <select value={viewMode} onChange={handleChangeViewMode}>
                     <option value="">Selecione o modo de visualização</option>
                     <option value="head_view">Head View</option>
                     <option value="model_view">Model View</option>
