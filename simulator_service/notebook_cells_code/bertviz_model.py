@@ -62,12 +62,12 @@ def train(model, input_ids, target, optimizer, criterion, vocab_size):
     return loss.item(), attention_weights
 
 # Função para visualizar os pesos de atenção
-def visualize_attention(attention_weights, tokens, view_mode):
+def visualize_attention(attention_weights, tokens, tokens_b, view_mode):
     # Usar BertViz para exibir os pesos de atenção
     if view_mode == 'head_view':
-        head_view(attention_weights, tokens)
+        head_view(attention_weights, tokens, tokens_b)
     elif view_mode == 'model_view':
-        model_view(attention_weights, tokens)
+        model_view(attention_weights, tokens, tokens_b)
 
 # Inicializando o modelo
 model = SimpleTransformer(VOCAB_SIZE, EMBED_SIZE, NUM_HEADS)
@@ -76,11 +76,16 @@ model = SimpleTransformer(VOCAB_SIZE, EMBED_SIZE, NUM_HEADS)
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 # Tokenizando o texto
-inputs = tokenizer(TEXT_SENTENCE_TRAIN, return_tensors='pt')
+inputs = tokenizer(TEXT_SENTENCE_TRAIN, TEXT_SENTENCE_TRAIN_B, return_tensors='pt')
 input_ids = inputs['input_ids']  # IDs dos tokens
+token_type_ids = inputs['token_type_ids']
 
 # Exibindo os tokens
-tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
+input_id_list = input_ids[0].tolist()
+tokens = tokenizer.convert_ids_to_tokens(input_id_list)
+
+sentence_b_start = token_type_ids[0].tolist().index(1)
+
 print(f"Tokens: {tokens}")
 
 # Definindo a função de perda e o otimizador
@@ -92,4 +97,4 @@ loss, attention_weights = train(model, input_ids, input_ids, optimizer, criterio
 print(f"Training loss: {loss}")
 
 # Visualizando os pesos de atenção
-visualize_attention(attention_weights, tokens, VIEW_MODE)
+visualize_attention(attention_weights, tokens, sentence_b_start, VIEW_MODE)

@@ -100,6 +100,7 @@ def run_transformer_with_attention(payload):
         try:
             arguments = {
                 'TEXT_SENTENCE_TRAIN': f"'{payload['text_sentence_train']}'",
+                'TEXT_SENTENCE_TRAIN_B': f"'{payload['text_sentence_train_b']}'",
                 'VIEW_MODE': f"'{payload['visualization_mode']}'",
                 'EMBED_SIZE': f"{payload['embed_size']}",
                 'NUM_HEADS': f"{payload['num_heads']}"

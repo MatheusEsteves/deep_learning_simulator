@@ -6,6 +6,7 @@ import "./Home.css";
 
 function Home() {
     const [textSentenceTrain, setTextSentenceTrain] = useState("");
+    const [textSentenceTrainB, setTextSentenceTrainB] = useState("");
     const [viewMode, setViewMode] = useState("");
     const [embedSize, setEmbedSize] = useState(0);
     const [numHeads, setNumHeads] = useState(0);
@@ -31,6 +32,7 @@ function Home() {
             'event_action_type': 'run_transformer_with_attention',
             'event_payload': {
                 'text_sentence_train': textSentenceTrain,
+                'text_sentence_train_b': textSentenceTrainB,
                 'visualization_mode': viewMode,
                 'embed_size': embedSize,
                 'num_heads': numHeads
@@ -42,6 +44,10 @@ function Home() {
 
     const handleChangeTextSentenceTrain = (e) => {
         setTextSentenceTrain(e.target.value);
+    }
+
+    const handleChangeTextSentenceTrainB = (e) => {
+        setTextSentenceTrainB(e.target.value);
     }
 
     const handleChangeViewMode = (e) => {
@@ -62,13 +68,22 @@ function Home() {
             <div class="model-form">
                 <h1>Deep Learning Simulator</h1>
 
-                <h2>Sentença</h2>
+                <h2>Sentença A</h2>
                 <textarea
                     value={textSentenceTrain}             
                     onChange={handleChangeTextSentenceTrain} 
                     rows="2"
                     cols="20"
-                    placeholder="Digite um texto com palavras para treinamento"
+                    placeholder="Digite o primeiro texto com palavras para treinamento"
+                />
+
+                <h2>Sentença B</h2>
+                <textarea
+                    value={textSentenceTrainB}             
+                    onChange={handleChangeTextSentenceTrainB}
+                    rows="2"
+                    cols="20"
+                    placeholder="Digite o segundo texto com palavras para treinamento"
                 />
 
                 <h2>Número de dimensões para embedding</h2>
